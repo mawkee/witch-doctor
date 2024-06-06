@@ -8,7 +8,8 @@ from enum import IntEnum
 from typing import Any, Type, TypeVar, List
 
 
-DEFAULT = "default"
+DEFAULT = "_default"
+CURRENT = "_current"
 
 
 class InjectionType(IntEnum):
@@ -29,7 +30,7 @@ class WitchDoctor:
     decorator to inject the dependencies
     """
 
-    _injection_map = {"current": {}, "default": {}}
+    _injection_map = {CURRENT: {}, DEFAULT: {}}
     _singletons = {}
     _signatures = {}
 
@@ -68,7 +69,7 @@ class WitchDoctor:
         """
         if name not in cls._injection_map:
             raise ValueError(f"Container {name} not created. Go back and fix it!")
-        cls._injection_map["current"].update(cls._injection_map[name])
+        cls._injection_map[CURRENT].update(cls._injection_map[name])
 
     @classmethod
     def injection(cls, function: T) -> T:
@@ -88,7 +89,7 @@ class WitchDoctor:
             for param, param_type in cls._signatures[function]:
                 if param in kwargs:
                     continue
-                if class_metadata := cls._injection_map["current"].get(param_type):
+                if class_metadata := cls._injection_map[CURRENT].get(param_type):
                     instance = cls.__resolve_instance(
                         class_ref=class_metadata["cls"],
                         args=class_metadata["args"],
@@ -98,6 +99,21 @@ class WitchDoctor:
             return function(*args, **kwargs)
 
         return medicine
+
+    @classmethod
+    def resolve(cls, interface: T) -> Type[T]:
+        """
+        WitchDoctor.resolve will return an instance of the registered class_ref interface.
+        Will raise a TypeError if interface is not registered\n
+        :param interface: Interface that inherits from ABC
+        """
+        if class_metadata := cls._injection_map[CURRENT].get(interface):
+            return cls.__resolve_instance(
+                class_ref=class_metadata["cls"],
+                args=class_metadata["args"],
+                injection_type=class_metadata["injection_type"],
+            )
+        raise TypeError("Interface was not registered on current loaded container")
 
     @classmethod
     def __resolve_instance(

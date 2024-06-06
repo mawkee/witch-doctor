@@ -194,3 +194,27 @@ def test_injection_type():
     instance_a4 = func_t()
 
     assert id(instance_a4) != id(instance_a3)
+
+
+def test_resolve_error():
+    class One:
+        pass
+
+    with pytest.raises(TypeError) as error:
+        WitchDoctor.resolve(One)
+    assert (
+        error.value.args[0]
+        == "Interface was not registered on current loaded container"
+    )
+
+
+def test_resolve():
+    WitchDoctor.register(
+        IStubFromABCClass, Stub4FromABCClass, InjectionType.SINGLETON, args=[10]
+    )
+    WitchDoctor.load_container()
+
+    instance_a1 = WitchDoctor.resolve(IStubFromABCClass)
+    instance_a2 = WitchDoctor.resolve(IStubFromABCClass)
+
+    assert id(instance_a2) == id(instance_a1)
