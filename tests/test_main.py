@@ -218,3 +218,4 @@ def test_resolve():
     instance_a2 = WitchDoctor.resolve(IStubFromABCClass)
 
     assert id(instance_a2) == id(instance_a1)
+    assert instance_a1.sum(1, 2) == instance_a2.sum(1, 2)
