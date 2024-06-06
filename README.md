@@ -63,7 +63,7 @@ WitchDoctor.load_container("prod")
 ```
 ## Injection 
 
-Witch Doctor must be used as decorator. The function signature will ber check and if some values was not provide Witch Doctor will search on the registered interfaces to inject the dependencies.
+Witch Doctor can be used as decorator. The function signature will ber check and if some values was not provide Witch Doctor will search on the registered interfaces to inject the dependencies.
 
 ```python
 class WitchDoctor:
@@ -130,4 +130,63 @@ result_a2 = func_t(a=2, b=2)
 
 assert result_a1 == 23
 assert result_a2 == 24
+```
+
+
+## Resolve 
+
+Witch Doctor can be used by the method resolve. The class signature will ber check and search on the registered interfaces to inject the dependencies.
+
+
+```python
+class WitchDoctor:
+    @classmethod
+    def resolve(cls, interface: T) -> Type[T]:
+        """
+        WitchDoctor.resolve will return an instance of the registered class_ref interface.
+        Will raise a TypeError if interface is not registered\n
+        :param interface: A implementation of the interface
+        """
+        pass
+```
+
+## Usage example
+
+```python
+from abc import ABC, abstractmethod
+
+from witch_doctor import WitchDoctor, InjectionType
+
+
+# Abstract class
+class IStubFromABCClass(ABC):
+    @abstractmethod
+    def sum(self, a: int, b: int):
+        pass
+
+    
+# Implementation
+class StubFromABCClass(IStubFromABCClass):
+    def __init__(self, a: int):
+        self.a = a
+
+    def sum(self, a: int, b: int):
+        return a + b + self.a
+
+# Usage
+@WitchDoctor.injection
+def func_t(a: int, b: int, c: IStubFromABCClass):
+    return c.sum(a, b)
+
+# Containers
+container = WitchDoctor.container()
+container(IStubFromABCClass, StubFromABCClass, InjectionType.FACTORY, args=[10])
+
+# Loading and using
+WitchDoctor.load_container()
+
+result_a1 = WitchDoctor.resolve(IStubFromABCClass)
+result_a2 = WitchDoctor.resolve(IStubFromABCClass)
+
+
 ```
