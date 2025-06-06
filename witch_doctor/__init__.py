@@ -1,12 +1,12 @@
 """
 Witch Doctor a simple dependencies injection
 """
+
 import functools
 import inspect
 from abc import ABC
 from enum import IntEnum
-from typing import Any, Type, TypeVar, List
-
+from typing import Any, List, Type, TypeVar
 
 DEFAULT = "_default"
 CURRENT = "_current"
@@ -37,9 +37,14 @@ class WitchDoctor:
     @classmethod
     def container(cls, name: str = DEFAULT):
         """
-        This method will provide a container register
-        :param name: Container name
-        :return: Wrapper for register func
+        Returns a wrapper function to register dependencies in a specific container scope.
+
+        If the container does not exist, it will be created automatically. The returned
+        function can be used to register an interface, its implementation, injection type,
+        and optional constructor arguments.
+
+        :param name: The name of the container scope. Defaults to the global DEFAULT container.
+        :return: A function that registers an interface with its implementation and injection settings.
         """
         if cls._injection_map.get(name) is None:
             cls._injection_map.update({name: {}})
@@ -63,9 +68,17 @@ class WitchDoctor:
     @classmethod
     def load_container(cls, name: str = DEFAULT):
         """
-        Will set the current container by the container name
-        :param name:
-        :return:
+        Loads a previously defined container scope into the current context.
+
+        This method sets the current container by copying the contents of the specified
+        container into the `CURRENT` container. It allows dynamic switching between
+        different dependency scopes.
+
+        Raises a ValueError if the specified container has not been created.
+
+        :param name: The name of the container to load into the current scope.
+                     Defaults to the global DEFAULT container.
+        :return: None
         """
         if name not in cls._injection_map:
             raise ValueError(f"Container {name} not created. Go back and fix it!")
@@ -74,9 +87,15 @@ class WitchDoctor:
     @classmethod
     def injection(cls, function: T) -> T:
         """
-        WitchDoctor.injection is a function decorator that will match the
-        function params signature and inject the  dependencies.\n
-        :type function: Callable
+        Decorator that automatically injects dependencies based on the function's parameter annotations.
+
+        WitchDoctor will inspect the function signature, match parameter types with registered
+        dependencies in the current container, and inject the appropriate instances at runtime.
+
+        Parameters already passed in the call (via args or kwargs) will not be overwritten.
+
+        :param function: The target function to decorate. Parameters must use type annotations.
+        :return: The wrapped function with automatic dependency injection.
         """
 
         params_signature = []
@@ -101,19 +120,25 @@ class WitchDoctor:
         return medicine
 
     @classmethod
-    def resolve(cls, interface: T) -> Type[T]:
+    def resolve(cls, interface: T, container_name: str = CURRENT) -> Type[T]:
         """
-        WitchDoctor.resolve will return an instance of the registered class_ref interface.
-        Will raise a TypeError if interface is not registered\n
-        :param interface: Interface that inherits from ABC
+        Returns an instance of the class registered for the given interface.
+        Raises a TypeError if the interface is not registered.
+
+        :param interface: The interface to resolve an implementation for.
+        :param container_name: (Optional) The name of the container scope to use.
+                               Defaults to the current active container.
+        :return: An instance of the implementation bound to the given interface.
         """
-        if class_metadata := cls._injection_map[CURRENT].get(interface):
+        if container_name not in cls._injection_map:
+            raise TypeError("Container not registered")
+        if class_metadata := cls._injection_map[container_name].get(interface):
             return cls.__resolve_instance(
                 class_ref=class_metadata["cls"],
                 args=class_metadata["args"],
                 injection_type=class_metadata["injection_type"],
             )
-        raise TypeError("Interface was not registered on current loaded container")
+        raise TypeError(f"Interface was not registered on {container_name} container")
 
     @classmethod
     def __resolve_instance(
@@ -135,14 +160,19 @@ class WitchDoctor:
         container: str = DEFAULT,
     ):
         """
-        WitchDoctor.register will check inherit of the interface and class_ref.
-        Will raise a TypeError on validation error\n
-        :param interface: Interface that inherits from ABC
-        :param class_ref: A implementation of the interface
-        :param injection_type: The injection type that must be used for this register.
-        Allowed Factory or Singleton
-        :param args: List of args tha will be used to instantiate the class object
-        :param container: Container name where the reference will be saved.
+        Registers a class implementation for a given interface in the specified container.
+
+        This method validates that the provided interface inherits from `ABC` and that
+        the implementation class (`class_ref`) properly inherits from the interface.
+        It also checks that the `injection_type` is valid (either Factory or Singleton).
+        If validation fails, a `TypeError` is raised.
+
+        :param interface: An abstract base class (must inherit from `ABC`).
+        :param class_ref: The concrete class that implements the given interface.
+        :param injection_type: The injection behavior to use. Must be one of `InjectionType.FACTORY` or `InjectionType.SINGLETON`.
+        :param args: Optional list of arguments to pass to the class constructor during instantiation.
+        :param container: The name of the container scope where the implementation will be registered. Defaults to the global container.
+        :return: The WitchDoctor class itself, to allow chaining.
         """
         if not issubclass(interface, ABC):
             raise TypeError("Interface does not inherit from ABC")

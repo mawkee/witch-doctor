@@ -202,10 +202,17 @@ def test_resolve_error():
 
     with pytest.raises(TypeError) as error:
         WitchDoctor.resolve(One)
-    assert (
-        error.value.args[0]
-        == "Interface was not registered on current loaded container"
+    assert error.value.args[0] == "Interface was not registered on _current container"
+
+
+def test_resolve_container_not_registered():
+    WitchDoctor.register(
+        IStubFromABCClass, Stub4FromABCClass, InjectionType.SINGLETON, args=[10]
     )
+    WitchDoctor.load_container()
+    with pytest.raises(TypeError) as error:
+        WitchDoctor.resolve(IStubFromABCClass, "test")
+    assert error.value.args[0] == "Container not registered"
 
 
 def test_resolve():

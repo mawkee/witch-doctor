@@ -7,12 +7,17 @@ By: CenturyBoys
 
 ## Register 
 
-Witch Doctor provides a method to register interfaces, implementation, injection type, instance args and container name. 
+**Witch Doctor** provides a structured method to register interfaces, implementations, injection types, constructor arguments, and container scopes.
 
-- The interface and implementation inheritance will be checked and will raise a TypeError if was some issue.
-- The injection type will be checked and will raise a TypeError if was some issue. There are two types the singleton and factory types, the singleton will return the same instance for all injection and the factory will return a new instance for each injection.
-- If no values was giving will not pass the args to the class constructor.
-- The container name will segregate the injections by scopes.
+* It validates the inheritance relationship between the interface and implementation. If there’s a mismatch, a `TypeError` is raised.
+* The injection type is also validated and must be either `"singleton"` or `"factory"`.
+
+  * `"singleton"` returns the same instance on every injection.
+  * `"factory"` creates a new instance for each injection.
+    An invalid type will raise a `TypeError`.
+* If no arguments are provided, the constructor will be called without parameters.
+* The `container_name` allows you to isolate dependency registrations by scope, enabling multi-context injection.
+
 
 ```python
 class WitchDoctor:
@@ -135,17 +140,18 @@ assert result_a2 == 24
 
 ## Resolve 
 
-Witch Doctor can be used by the method resolve. The class signature will ber check and search on the registered interfaces to inject the dependencies.
-
+The `resolve` method is used to retrieve an instance of a class registered in Witch Doctor.
+It validates the class signature and searches for the matching implementation based on the registered interfaces. Dependencies are automatically injected.
 
 ```python
 class WitchDoctor:
     @classmethod
-    def resolve(cls, interface: T) -> Type[T]:
+    def resolve(cls, interface: T, container_name: str = CURRENT) -> Type[T]:
         """
         WitchDoctor.resolve will return an instance of the registered class_ref interface.
         Will raise a TypeError if interface is not registered\n
         :param interface: A implementation of the interface
+        :param container_name: You can specify the container name to be used by the resolve method
         """
         pass
 ```
