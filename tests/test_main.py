@@ -137,6 +137,7 @@ def test_inject_overwrite():
 
 def test_injection_on_class_method():
     WitchDoctor.register(IStubFromABCClass, Stub1FromABCClass, InjectionType.FACTORY)
+    WitchDoctor.load_container()
 
     stub_c = Stub3FromABCClass(a=1, b=2)
     result = stub_c.perform_sum()
@@ -202,10 +203,17 @@ def test_resolve_error():
 
     with pytest.raises(TypeError) as error:
         WitchDoctor.resolve(One)
-    assert (
-        error.value.args[0]
-        == "Interface was not registered on current loaded container"
+    assert error.value.args[0] == "Interface was not registered on _current container"
+
+
+def test_resolve_container_not_registered():
+    WitchDoctor.register(
+        IStubFromABCClass, Stub4FromABCClass, InjectionType.SINGLETON, args=[10]
     )
+    WitchDoctor.load_container()
+    with pytest.raises(TypeError) as error:
+        WitchDoctor.resolve(IStubFromABCClass, "test")
+    assert error.value.args[0] == "Container not registered"
 
 
 def test_resolve():
