@@ -35,6 +35,12 @@ class WitchDoctor:
     _signatures = {}
 
     @classmethod
+    def _reset(cls):
+        """Reset all internal state for test isolation."""
+        cls._injection_map = {CURRENT: {}, DEFAULT: {}}
+        cls._singletons = {}
+
+    @classmethod
     def container(cls, name: str = DEFAULT):
         """
         Returns a wrapper function to register dependencies in a specific container scope.
@@ -53,7 +59,7 @@ class WitchDoctor:
             interface: Type[ABC],
             class_ref: Any,
             injection_type: InjectionType,
-            args: List[any] = None,
+            args: List[Any] = None,
         ):
             cls.register(
                 interface=interface,
@@ -156,7 +162,7 @@ class WitchDoctor:
         interface: Type[ABC],
         class_ref: Any,
         injection_type: InjectionType,
-        args: List[any] = None,
+        args: List[Any] = None,
         container: str = DEFAULT,
     ):
         """

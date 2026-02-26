@@ -137,6 +137,7 @@ def test_inject_overwrite():
 
 def test_injection_on_class_method():
     WitchDoctor.register(IStubFromABCClass, Stub1FromABCClass, InjectionType.FACTORY)
+    WitchDoctor.load_container()
 
     stub_c = Stub3FromABCClass(a=1, b=2)
     result = stub_c.perform_sum()
