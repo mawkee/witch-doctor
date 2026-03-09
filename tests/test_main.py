@@ -227,3 +227,73 @@ def test_resolve():
 
     assert id(instance_a2) == id(instance_a1)
     assert instance_a1.sum(1, 2) == instance_a2.sum(1, 2)
+
+
+def test_singleton_isolation_between_containers():
+    """Singletons must be isolated per container to prevent cross-tenant leakage."""
+
+    class IService(ABC):
+        @abstractmethod
+        def get_id(self) -> int:
+            pass
+
+    class ServiceImpl(IService):
+        def __init__(self, tenant_id: int):
+            self.tenant_id = tenant_id
+
+        def get_id(self) -> int:
+            return self.tenant_id
+
+    # Register same class in different containers with different args
+    container_a = WitchDoctor.container("tenant_a")
+    container_a(IService, ServiceImpl, InjectionType.SINGLETON, args=[1])
+
+    container_b = WitchDoctor.container("tenant_b")
+    container_b(IService, ServiceImpl, InjectionType.SINGLETON, args=[2])
+
+    # Resolve directly from each container (not via CURRENT)
+    instance_a = WitchDoctor.resolve(IService, "tenant_a")
+    instance_b = WitchDoctor.resolve(IService, "tenant_b")
+
+    # Each container must have its own singleton instance
+    assert instance_a.get_id() == 1
+    assert instance_b.get_id() == 2
+    assert id(instance_a) != id(instance_b)
+
+
+def test_clear_container_singletons():
+    """clear_container should only remove singletons from the specified container."""
+
+    class IService(ABC):
+        @abstractmethod
+        def get_id(self) -> int:
+            pass
+
+    class ServiceImpl(IService):
+        def __init__(self, tenant_id: int):
+            self.tenant_id = tenant_id
+
+        def get_id(self) -> int:
+            return self.tenant_id
+
+    # Setup two containers
+    container_a = WitchDoctor.container("tenant_a")
+    container_a(IService, ServiceImpl, InjectionType.SINGLETON, args=[1])
+
+    container_b = WitchDoctor.container("tenant_b")
+    container_b(IService, ServiceImpl, InjectionType.SINGLETON, args=[2])
+
+    # Resolve directly from containers to create singleton instances
+    instance_a1 = WitchDoctor.resolve(IService, "tenant_a")
+    instance_b1 = WitchDoctor.resolve(IService, "tenant_b")
+
+    # Clear only tenant_a
+    WitchDoctor.clear_container("tenant_a")
+
+    # tenant_a should get a NEW instance
+    instance_a2 = WitchDoctor.resolve(IService, "tenant_a")
+    assert id(instance_a1) != id(instance_a2)
+
+    # tenant_b should still have the SAME instance
+    instance_b2 = WitchDoctor.resolve(IService, "tenant_b")
+    assert id(instance_b1) == id(instance_b2)

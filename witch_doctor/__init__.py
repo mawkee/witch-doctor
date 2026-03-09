@@ -119,6 +119,7 @@ class WitchDoctor:
                         class_ref=class_metadata["cls"],
                         args=class_metadata["args"],
                         injection_type=class_metadata["injection_type"],
+                        container_name=CURRENT,
                     )
                     kwargs.update({param: instance})
             return function(*args, **kwargs)
@@ -143,17 +144,23 @@ class WitchDoctor:
                 class_ref=class_metadata["cls"],
                 args=class_metadata["args"],
                 injection_type=class_metadata["injection_type"],
+                container_name=container_name,
             )
         raise TypeError(f"Interface was not registered on {container_name} container")
 
     @classmethod
     def __resolve_instance(
-        cls, class_ref: T, args: list, injection_type: InjectionType
+        cls,
+        class_ref: T,
+        args: list,
+        injection_type: InjectionType,
+        container_name: str,
     ) -> Type[T]:
         if injection_type:
-            if cls._singletons.get(class_ref) is None:
-                cls._singletons.update({class_ref: class_ref(*args)})
-            return cls._singletons.get(class_ref)
+            key = (container_name, class_ref)
+            if cls._singletons.get(key) is None:
+                cls._singletons[key] = class_ref(*args)
+            return cls._singletons[key]
         return class_ref(*args)
 
     @classmethod
@@ -198,3 +205,15 @@ class WitchDoctor:
             }
         )
         return cls
+
+    @classmethod
+    def clear_container(cls, name: str):
+        """
+        Clears all singleton instances for a specific container.
+        Useful for multi-tenant scenarios where you need to unload a tenant.
+
+        :param name: The name of the container to clear singletons for.
+        """
+        keys_to_remove = [key for key in cls._singletons if key[0] == name]
+        for key in keys_to_remove:
+            del cls._singletons[key]
